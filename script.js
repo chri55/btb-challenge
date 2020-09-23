@@ -1,5 +1,3 @@
-
-
 function getPages(maxValue, numPerPage=500) {
   /**
    * Function designed to paginate results from the API,
@@ -30,7 +28,7 @@ async function getAuth () {
     console.log('already got api key');
     return window.API_KEY;
   }
-  return fetch('https://cors-anywhere.herokuapp.com/https://challenger.btbsecurity.com/auth',
+  return fetch('https://curly-surf-1c5a.cpaultill.workers.dev/?https://challenger.btbsecurity.com/auth',
     {
       method: 'get',
       //mode: 'no-cors',
@@ -71,7 +69,7 @@ async function getEvents (fromValue=null, toValue=null) {
   }
   return getAuth().then(key => {
     //if (window.API_KEY) return window.API_KEY;
-    return fetch(`https://cors-anywhere.herokuapp.com/https://challenger.btbsecurity.com/get-events${toAppend}`,
+    return fetch(`https://curly-surf-1c5a.cpaultill.workers.dev/?https://challenger.btbsecurity.com/get-events${toAppend}`,
     {
       method: 'get',
       //mode: 'no-cors',
@@ -153,12 +151,21 @@ function normalizeData(entry) {
 } 
 
 function reduceUsers() {
+  /**
+   * Prepare a reduced version of the normalized data, for visualization purposes.
+   * 
+   */
   if (!window.NORMALIZED_DATA) return -1;
   window.USERS_REDUCED = window.NORMALIZED_DATA.reduce((accumulator, entry) => {
     if (!accumulator[entry.UserName]) {
       accumulator[entry.UserName] = {};
       accumulator[entry.UserName].Count = 0;
       accumulator[entry.UserName].LoginAttempts = [];
+      accumulator[entry.UserName].LoginAttemptCounts = {
+        success: 0,
+        failure: 0,
+      }
+      accumulator[entry.UserName].TargetConnections = {}
     }
     accumulator[entry.UserName].Count ++;
     accumulator[entry.UserName].LoginAttempts.push({
@@ -166,13 +173,20 @@ function reduceUsers() {
       id: entry.AcmeApiId,
       ip: entry.SourceIp,
       action: entry.Action,
-    })
+    });
+    entry.Action === 'Logon-Success' ?
+      accumulator[entry.UserName].LoginAttemptCounts.success ++ :
+      accumulator[entry.UserName].LoginAttemptCounts.failure ++;
     return accumulator;
   }, new Object());
   return 1;
 }
 
 function reduceTargets() {
+  /**
+   * Prepare a reduced version of the normalized data, for visualization purposes.
+   * 
+   */
   if (!window.NORMALIZED_DATA) return -1;
   window.TARGETS_REDUCED = window.NORMALIZED_DATA.reduce((accumulator, entry) => {
     if (!accumulator[entry.Target]) {
@@ -191,13 +205,43 @@ function reduceTargets() {
   }, new Object());
 }
 
+function getPercentageSuccessFailure(loginAttemptCounts) {
+  /**
+   * Returns an array of successes to failure, based on their respective counts.
+   * 
+   * @params: an object with properties "success" and "failure"
+   * @returns Array of [successPercentage, failurePercentage]
+   */
+  const {
+    success,
+    failure,
+  } = loginAttemptCounts;
+  console.log(success, failure);
+  return [
+    (success / (success + failure) * 100).toFixed(2),
+    (failure / (success + failure) * 100).toFixed(2),
+  ]
+}
+
 function sortSetByLoginCount(objectToSort) {
+  /**
+   *  Sort item entries by those that have the highest interaction count, so we can make the graph.
+   * 
+   * @params objectToSort: an entry to sort containing the Count property.
+   */
   if (!objectToSort) return -1;
   return Object.entries(objectToSort).sort((a, b) => a[1].Count > b[1].Count ? -1 : 1);
 }
 
-function createTargetBarGraph(data, selector) {
-  var margin = {top: 30, right: 30, bottom: 70, left: 60},
+function createTargetBarGraph(data, selector, title) {
+  /**
+   * Create a d3 bar graph and display the data sent in!
+   * 
+   * @params data: the data array.
+   * @params selector: the selector used to access the div the graph is held in.
+   * @params title: the graph title.
+   */
+  var margin = {top: 30, right: 30, bottom: 140, left: 120},
     width = 460 - margin.left - margin.right,
     height = 400 - margin.top - margin.bottom;
 
@@ -210,7 +254,7 @@ function createTargetBarGraph(data, selector) {
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
-  // X Axis: 
+  // Add X axis 
   var x = d3.scaleBand()
     .range([0, width])
     .domain(data.map(d => d[0]))
@@ -222,6 +266,7 @@ function createTargetBarGraph(data, selector) {
       .attr("transform", "translate(-10,0)rotate(-45)")
       .style("color", "#184163")
       .style("text-anchor", "end");
+
   // Add Y axis
   var y = d3.scaleLinear()
     .domain([0, data[0][1].Count])
@@ -229,6 +274,7 @@ function createTargetBarGraph(data, selector) {
   svg.append("g")
     .call(d3.axisLeft(y));
 
+  // Add rectangles
   svg.selectAll("mybar")
     .data(data)
     .enter()
@@ -237,8 +283,9 @@ function createTargetBarGraph(data, selector) {
       .attr("y", function(d) { return y(d[1].Count); })
       .attr("width", x.bandwidth())
       .attr("height", function(d) { return height - y(d[1].Count); })
-      .attr("fill", "#04969E");
+      .attr("fill", "#4B8B91");
 
+  // Add title
   svg.append("text")
     .attr("x", (width / 2))             
     .attr("y", 0 - (margin.top / 2))
@@ -246,7 +293,7 @@ function createTargetBarGraph(data, selector) {
     .style("font-size", "16px") 
     .style("color", "#184163")
     .style("text-decoration", "underline")  
-    .text("Number of Logins Per Domain");
+    .text(`${title}`);
 }
 
 async function driverCode() {
@@ -287,20 +334,29 @@ async function driverCode() {
     button.disabled = false;
   })
   .then(() => {
+    /**
+     * Play with data and get it into a nice format to display.
+     * Create 2 bar graphs, and a table of data.
+     */
     reduceTargets();
     reduceUsers();
     window.USERS_REDUCED_SORTED = sortSetByLoginCount(window.USERS_REDUCED);
     window.TARGETS_REDUCED_SORTED = sortSetByLoginCount(window.TARGETS_REDUCED);
-    createTargetBarGraph(window.TARGETS_REDUCED_SORTED, 'target_dataviz');
-    createTargetBarGraph(window.USERS_REDUCED_SORTED.slice(0, 20), 'user_dataviz');
+    createTargetBarGraph(window.TARGETS_REDUCED_SORTED, 'target_dataviz', 'Number of Logins per Domain');
+    createTargetBarGraph(window.USERS_REDUCED_SORTED.slice(0, 20), 'user_dataviz', 'Number of Logins Per User (Top 20)');
+    let table = document.querySelector('#user-table');
+    let h4 = document.querySelector("#user-table-description");
+    window.USERS_REDUCED_SORTED.slice(0, 50).forEach((entry, i) => {
+      let row = table.insertRow(i+1);
+      const percentages = getPercentageSuccessFailure(entry[1].LoginAttemptCounts);
+      row.insertCell(0).innerHTML = `${entry[0]}`;
+      row.insertCell(1).innerHTML = `${entry[1].LoginAttemptCounts.success + entry[1].LoginAttemptCounts.failure}`;
+      row.insertCell(2).innerHTML = `${percentages[0]}%`;
+      row.insertCell(3).innerHTML = `${percentages[1]}%`;
+    });
+    table.style.display = "table";
+    h4.style.display = "block";
   });
 } 
 
-//driverCode();
-
-//// DONE: Implement Paging 500 at a time.
-//// DONE: Driver Code.
-//// DONE: Normalization of data.
-//// DONE: Provide a download button for all entries once normalized.
-//// TODO: Table with paginated logs and event listener.
-//// TODO: Fun vis? Show off some css.
+driverCode();

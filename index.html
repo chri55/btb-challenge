@@ -5,12 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BTB Coding Challenge</title>
   <script src="https://d3js.org/d3.v4.js"></script>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h4 class="title" id="status">Loading...</h4>
-  <a id="download-link" href="#"><button id="download" disabled>Download Normalized Data</button></a>
-  <div id="target_dataviz"></div>
-  <div id="user_dataviz"></div>
+  <div class="container column">
+    <h4 class="title" id="status">Loading...</h4>
+    <a id="download-link" href="#"><button id="download" disabled>Download Normalized Data</button></a>
+  </div>
+
+  <div class="container row">
+    <div id="target_dataviz"></div>
+    <div id="user_dataviz"></div>
+  </div>
+  <h4 id="user-table-description" style="display: none;">Top 50 Users and Action Percentages</h4>
+  <table id="user-table" cellspacing=0 style="display: none;">
+    <tr>
+      <td>UserName</td>
+      <td>Total Interactions</td>
+      <td>% Success</td>
+      <td>% Failure</td>
+    </tr>
+  </table>
 
   <script src="script.js"></script>
   

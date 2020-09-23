@@ -25,7 +25,6 @@ async function getAuth () {
    * @returns String API Key.
    */
   if (window.API_KEY) {
-    console.log('already got api key');
     return window.API_KEY;
   }
   return fetch('https://curly-surf-1c5a.cpaultill.workers.dev/?https://challenger.btbsecurity.com/auth',
@@ -68,7 +67,6 @@ async function getEvents (fromValue=null, toValue=null) {
      }
   }
   return getAuth().then(key => {
-    //if (window.API_KEY) return window.API_KEY;
     return fetch(`https://curly-surf-1c5a.cpaultill.workers.dev/?https://challenger.btbsecurity.com/get-events${toAppend}`,
     {
       method: 'get',
@@ -78,7 +76,6 @@ async function getEvents (fromValue=null, toValue=null) {
       })
     })
     .then(res => res.json());
-    //.then(data => console.log(data.EntryCount));
   }); 
 }
 
@@ -131,7 +128,6 @@ function normalizeData(entry) {
    * @params entry: A /get-events log entry.
    * @returns Object with requested fields normalized.
    */
-  //console.log(entry);
   const {
     DateTimeAndStuff,
     EVENT_0_ACTION,
@@ -216,7 +212,6 @@ function getPercentageSuccessFailure(loginAttemptCounts) {
     success,
     failure,
   } = loginAttemptCounts;
-  console.log(success, failure);
   return [
     (success / (success + failure) * 100).toFixed(2),
     (failure / (success + failure) * 100).toFixed(2),

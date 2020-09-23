@@ -67,6 +67,7 @@ async function getEvents (fromValue=null, toValue=null) {
      }
   }
   return getAuth().then(key => {
+    // Use a proxy to deal with potential CORS issues.
     return fetch(`https://curly-surf-1c5a.cpaultill.workers.dev/?https://challenger.btbsecurity.com/get-events${toAppend}`,
     {
       method: 'get',

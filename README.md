@@ -1,4 +1,7 @@
 # btb-challenge
+
+***NOTE: I think this no longer works because the challenge site is down.***
+
 Solution for BTB Security coding challenge.
 
 For this challenge I decided to use Javascript, 
